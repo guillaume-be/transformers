@@ -42,13 +42,15 @@ num_iterations = 3
 generation_times = []
 for _ in range(num_iterations):
     iteration_start = time.time()
-    outputs = model.generate(encoded_input,
-                             max_length=142,
-                             num_beams=3,
-                             temperature=1.0,
-                             top_k=50,
-                             top_p=1.0,
-                             length_penalty=1.0,
-                             min_length=56,
-                             do_sample=False)
-    print(tokenizer.decode(outputs[0], skip_special_tokens=True, clean_up_tokenization_spaces=True))
+    with torch.no_grad():
+        outputs = model.generate(encoded_input,
+                                 max_length=142,
+                                 num_beams=3,
+                                 temperature=1.0,
+                                 top_k=50,
+                                 top_p=1.0,
+                                 length_penalty=1.0,
+                                 min_length=56,
+                                 do_sample=False)
+        print(tokenizer.decode(outputs[0], skip_special_tokens=True, clean_up_tokenization_spaces=True))
+        print(f'Iteration time : {time.time() - iteration_start}')
