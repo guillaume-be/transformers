@@ -2,11 +2,11 @@ import time
 
 import torch
 
-from transformers import BartTokenizer
+from transformers.tokenization_bart import BartTokenizer
 from transformers.modeling_bart import BartForConditionalGeneration, BartModel
 
 tokenizer = BartTokenizer.from_pretrained('bart-large-cnn')
-model = BartForConditionalGeneration.from_pretrained('bart-large-cnn')
+model = BartForConditionalGeneration.from_pretrained('bart-large-cnn').cuda()
 # model.model.output_attentions = True
 # model.model.output_hidden_states = True
 model = model.eval()
@@ -33,15 +33,14 @@ on K2-18b lasts 33 Earth days. According to The Guardian, astronomers were optim
 telescope — scheduled for launch in 2021 — and the European Space Agency's 2028 ARIEL program, could reveal more \
 about exoplanets like K2-18b."""]
 
-encoded_input = [tokenizer.encode(text, add_special_tokens=True) for text in TEXT_TO_SUMMARIZE]
-max_len = max([len(sentence) for sentence in encoded_input])
-encoded_input = [sequence + (max_len - len(sequence)) * [0] for sequence in encoded_input]
-encoded_input = torch.Tensor(encoded_input).long()
-
 num_iterations = 3
 generation_times = []
 for _ in range(num_iterations):
     iteration_start = time.time()
+    encoded_input = [tokenizer.encode(text, add_special_tokens=True) for text in TEXT_TO_SUMMARIZE]
+    max_len = max([len(sentence) for sentence in encoded_input])
+    encoded_input = [sequence + (max_len - len(sequence)) * [0] for sequence in encoded_input]
+    encoded_input = torch.Tensor(encoded_input).long().cuda()
     with torch.no_grad():
         outputs = model.generate(encoded_input,
                                  max_length=142,

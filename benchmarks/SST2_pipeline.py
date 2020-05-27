@@ -16,7 +16,7 @@ if __name__ == '__main__':
     # ========================
 
     root_path = Path('E:/Coding/data-resources/sst2/')
-    vocab_path = Path('C:/Users/Guillaume/rustbert/distilbert_sst2/vocab.txt')
+    vocab_path = Path('E:/Coding/cache/rustbert/distilbert-sst2/vocab.txt')
     batch_size = 64
 
     t1 = time.time()
