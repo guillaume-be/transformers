@@ -27,6 +27,7 @@ if __name__ == '__main__':
     n_iter = 10
 
     loading_times = []
+    feature_preparation_times = []
     forward_pass_times = []
 
     # ========================
@@ -61,6 +62,23 @@ if __name__ == '__main__':
         )
 
         batch_indices = generate_batch_indices(features, batch_size)
+
+    for i in range(n_iter):
+        t1 = time.time()
+
+        features = squad_convert_examples_to_features(
+            examples=data,
+            tokenizer=tokenizer,
+            max_seq_length=max_seq_length,
+            doc_stride=doc_stride,
+            max_query_length=max_query_length,
+            is_training=False,
+            threads=multiprocessing.cpu_count()
+        )
+
+        batch_indices = generate_batch_indices(features, batch_size)
+        t2 = time.time()
+        feature_preparation_times.append(t2 - t1)
 
         # ========================
         # Forward pass
@@ -131,4 +149,5 @@ if __name__ == '__main__':
         forward_pass_times.append(t2 - t1)
 
     print(f'Inference: {sum(forward_pass_times) / len(forward_pass_times)}s')
+    print(f'Feature generation: {sum(feature_preparation_times) / len(feature_preparation_times)}s')
     print(f'Loading: {sum(loading_times) / len(loading_times)}s')

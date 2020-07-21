@@ -21,6 +21,7 @@ if __name__ == '__main__':
     n_iter = 10
 
     loading_times = []
+    feature_preparation_times = []
     forward_pass_times = []
 
     # ========================
@@ -43,6 +44,16 @@ if __name__ == '__main__':
     data = processor.get_train_examples(root_path)
     data = [example.text_a for example in data[:5000]]
 
+    for i in range(n_iter):
+        t1 = time.time()
+        num_batches = len(data) // batch_size + 1
+        outputs = []
+        for batch_index in range(num_batches):
+            batch = data[batch_index * batch_size:min((batch_index + 1) * batch_size, len(data))]
+            inputs = tokenizer.batch_encode_plus(batch, return_tensors='pt', padding=True)['input_ids'].cuda(0)
+        t2 = time.time()
+        feature_preparation_times.append(t2 - t1)
+
     # ========================
     # Pipeline execution
     # ========================
@@ -60,4 +71,5 @@ if __name__ == '__main__':
         forward_pass_times.append(t2 - t1)
 
     print(f'Inference: {sum(forward_pass_times) / len(forward_pass_times)}s')
+    print(f'Feature generation: {sum(feature_preparation_times) / len(feature_preparation_times)}s')
     print(f'Total: {sum(loading_times) / len(loading_times)}s')
