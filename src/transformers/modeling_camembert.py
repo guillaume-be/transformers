@@ -31,11 +31,14 @@ from .modeling_roberta import (
 
 logger = logging.getLogger(__name__)
 
-CAMEMBERT_PRETRAINED_MODEL_ARCHIVE_MAP = {
-    "camembert-base": "https://cdn.huggingface.co/camembert-base-pytorch_model.bin",
-    "umberto-commoncrawl-cased-v1": "https://cdn.huggingface.co/Musixmatch/umberto-commoncrawl-cased-v1/pytorch_model.bin",
-    "umberto-wikipedia-uncased-v1": "https://cdn.huggingface.co/Musixmatch/umberto-wikipedia-uncased-v1/pytorch_model.bin",
-}
+_TOKENIZER_FOR_DOC = "CamembertTokenizer"
+
+CAMEMBERT_PRETRAINED_MODEL_ARCHIVE_LIST = [
+    "camembert-base",
+    "Musixmatch/umberto-commoncrawl-cased-v1",
+    "Musixmatch/umberto-wikipedia-uncased-v1",
+    # See all CamemBERT models at https://huggingface.co/models?filter=camembert
+]
 
 CAMEMBERT_START_DOCSTRING = r"""
 
@@ -48,6 +51,12 @@ CAMEMBERT_START_DOCSTRING = r"""
             model. Initializing with a config file does not load the weights associated with the model, only the
             configuration.
             Check out the :meth:`~transformers.PreTrainedModel.from_pretrained` method to load the model weights.
+        output_attentions (:obj:`bool`, `optional`, defaults to :obj:`None`):
+            If set to ``True``, the attentions tensors of all attention layers are returned. See ``attentions`` under returned tensors for more detail.
+        output_hidden_states (:obj:`bool`, `optional`, defaults to :obj:`None`):
+            If set to ``True``, the hidden states of all layers are returned. See ``hidden_states`` under returned tensors for more detail.
+        return_tuple (:obj:`bool`, `optional`, defaults to :obj:`None`):
+            If set to ``True``, the output of the model will be a plain tuple instead of a ``dataclass``.
 """
 
 
@@ -62,7 +71,6 @@ class CamembertModel(RobertaModel):
     """
 
     config_class = CamembertConfig
-    pretrained_model_archive_map = CAMEMBERT_PRETRAINED_MODEL_ARCHIVE_MAP
 
 
 @add_start_docstrings(
@@ -75,7 +83,6 @@ class CamembertForMaskedLM(RobertaForMaskedLM):
     """
 
     config_class = CamembertConfig
-    pretrained_model_archive_map = CAMEMBERT_PRETRAINED_MODEL_ARCHIVE_MAP
 
 
 @add_start_docstrings(
@@ -90,7 +97,6 @@ class CamembertForSequenceClassification(RobertaForSequenceClassification):
     """
 
     config_class = CamembertConfig
-    pretrained_model_archive_map = CAMEMBERT_PRETRAINED_MODEL_ARCHIVE_MAP
 
 
 @add_start_docstrings(
@@ -105,7 +111,6 @@ class CamembertForMultipleChoice(RobertaForMultipleChoice):
     """
 
     config_class = CamembertConfig
-    pretrained_model_archive_map = CAMEMBERT_PRETRAINED_MODEL_ARCHIVE_MAP
 
 
 @add_start_docstrings(
@@ -120,7 +125,6 @@ class CamembertForTokenClassification(RobertaForTokenClassification):
     """
 
     config_class = CamembertConfig
-    pretrained_model_archive_map = CAMEMBERT_PRETRAINED_MODEL_ARCHIVE_MAP
 
 
 @add_start_docstrings(
@@ -135,4 +139,3 @@ class CamembertForQuestionAnswering(RobertaForQuestionAnswering):
     """
 
     config_class = CamembertConfig
-    pretrained_model_archive_map = CAMEMBERT_PRETRAINED_MODEL_ARCHIVE_MAP

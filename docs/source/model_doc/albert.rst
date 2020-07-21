@@ -47,10 +47,24 @@ AlbertTokenizer
         create_token_type_ids_from_sequences, save_vocabulary
 
 
+Albert specific outputs
+~~~~~~~~~~~~~~~~~~~~~~~
+
+.. autoclass:: transformers.modeling_albert.AlbertForPretrainingOutput
+    :members:
+
+
 AlbertModel
 ~~~~~~~~~~~~~~~~~~~~
 
 .. autoclass:: transformers.AlbertModel
+    :members:
+
+
+AlbertForPreTraining
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. autoclass:: transformers.AlbertForPreTraining
     :members:
 
 
@@ -68,6 +82,20 @@ AlbertForSequenceClassification
     :members:
 
 
+AlbertForMultipleChoice
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. autoclass:: transformers.AlbertForMultipleChoice
+    :members:
+
+
+AlbertForTokenClassification
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. autoclass:: transformers.AlbertForTokenClassification
+    :members:
+
+
 AlbertForQuestionAnswering
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -82,6 +110,13 @@ TFAlbertModel
     :members:
 
 
+TFAlbertForPreTraining
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. autoclass:: transformers.TFAlbertForPreTraining
+    :members:
+
+
 TFAlbertForMaskedLM
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -93,4 +128,25 @@ TFAlbertForSequenceClassification
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. autoclass:: transformers.TFAlbertForSequenceClassification
+    :members:
+
+
+TFAlbertForMultipleChoice
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. autoclass:: transformers.TFAlbertForMultipleChoice
+    :members:
+
+
+TFAlbertForTokenClassification
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. autoclass:: transformers.TFAlbertForTokenClassification
+    :members:
+
+
+TFAlbertForQuestionAnswering
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. autoclass:: transformers.TFAlbertForQuestionAnswering
     :members:

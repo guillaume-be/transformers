@@ -34,7 +34,7 @@ The code above will output following list:
 ["negative","negative","positive","positive","neutral", "neutral"]
 ```
 
-## minimal working Sample
+## A minimal working Sample
 
 
 ```python
@@ -55,7 +55,7 @@ class SentimentModel():
     def predict_sentiment(self, texts: List[str])-> List[str]:
         texts = [self.clean_text(text) for text in texts]
         # Add special tokens takes care of adding [CLS], [SEP], <s>... tokens in the right way for each model.
-        input_ids = self.tokenizer.batch_encode_plus(texts,pad_to_max_length=True, add_special_tokens=True)
+        input_ids = self.tokenizer(texts, padding=True, truncation=True, add_special_tokens=True)
         input_ids = torch.tensor(input_ids["input_ids"])
 
         with torch.no_grad():
@@ -90,7 +90,7 @@ print(model.predict_sentiment(texts))
 
 ## Model and Data
 
-If you are interested in code and data that was used to train this model please have a look at [this repository](https://github.com/oliverguhr/german-sentiment) and our [paper](http://www.lrec-conf.org/proceedings/lrec2020/pdf/2020.lrec-1.201.pdf). Here is a table of the F1 scores that his model achieves on following datasets. Since we trained this model on a newer version of the transformer library, the results are slightly better than reported in the paper.
+If you are interested in code and data that was used to train this model please have a look at [this repository](https://github.com/oliverguhr/german-sentiment) and our [paper](http://www.lrec-conf.org/proceedings/lrec2020/pdf/2020.lrec-1.202.pdf). Here is a table of the F1 scores that his model achieves on following datasets. Since we trained this model on a newer version of the transformer library, the results are slightly better than reported in the paper.
 
 | Dataset                                                      | F1 micro Score |
 | :----------------------------------------------------------- | -------------: |
