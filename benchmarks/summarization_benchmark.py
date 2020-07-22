@@ -5,8 +5,8 @@ import torch
 from transformers.tokenization_bart import BartTokenizer
 from transformers.modeling_bart import BartForConditionalGeneration, BartModel
 
-tokenizer = BartTokenizer.from_pretrained('bart-large-cnn')
-model = BartForConditionalGeneration.from_pretrained('bart-large-cnn').cuda()
+tokenizer = BartTokenizer.from_pretrained('facebook/bart-large-cnn')
+model = BartForConditionalGeneration.from_pretrained('facebook/bart-large-cnn').cuda()
 # model.model.output_attentions = True
 # model.model.output_hidden_states = True
 model = model.eval()
@@ -33,10 +33,32 @@ on K2-18b lasts 33 Earth days. According to The Guardian, astronomers were optim
 telescope — scheduled for launch in 2021 — and the European Space Agency's 2028 ARIEL program, could reveal more \
 about exoplanets like K2-18b."""]
 
-num_iterations = 3
+
 generation_times = []
-for _ in range(num_iterations):
-    iteration_start = time.time()
+n_iter = 10
+loading_times = []
+feature_preparation_times = []
+forward_pass_times = []
+
+for i in range(n_iter):
+    t1 = time.time()
+    tokenizer = BartTokenizer.from_pretrained('facebook/bart-large-cnn')
+    model = BartForConditionalGeneration.from_pretrained('facebook/bart-large-cnn').cuda()
+    t2 = time.time()
+    loading_times.append(t2 - t1)
+
+for _ in range(n_iter):
+    t1 = time.time()
+    encoded_input = [tokenizer.encode(text, add_special_tokens=True) for text in TEXT_TO_SUMMARIZE]
+    max_len = max([len(sentence) for sentence in encoded_input])
+    encoded_input = [sequence + (max_len - len(sequence)) * [0] for sequence in encoded_input]
+    encoded_input = torch.Tensor(encoded_input).long().cuda()
+    t2 = time.time()
+    feature_preparation_times.append(t2 - t1)
+
+
+for _ in range(n_iter):
+    t1 = time.time()
     encoded_input = [tokenizer.encode(text, add_special_tokens=True) for text in TEXT_TO_SUMMARIZE]
     max_len = max([len(sentence) for sentence in encoded_input])
     encoded_input = [sequence + (max_len - len(sequence)) * [0] for sequence in encoded_input]
@@ -52,4 +74,9 @@ for _ in range(num_iterations):
                                  min_length=56,
                                  do_sample=False)
         print(tokenizer.decode(outputs[0], skip_special_tokens=True, clean_up_tokenization_spaces=True))
-        print(f'Iteration time : {time.time() - iteration_start}')
+        t2 = time.time()
+        forward_pass_times.append(t2 - t1)
+
+print(f'Inference: {sum(forward_pass_times) / len(forward_pass_times)}s')
+print(f'Feature generation: {sum(feature_preparation_times) / len(feature_preparation_times)}s')
+print(f'Loading: {sum(loading_times) / len(loading_times)}s')
