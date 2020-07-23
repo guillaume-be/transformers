@@ -56,6 +56,8 @@ for _ in range(n_iter):
         #     print(output)
         t2 = time.time()
         forward_pass_times.append(t2 - t1)
-
+        
+print(f'Loading: {sum(loading_times) / len(loading_times)}s')
 print(f'Inference: {sum(forward_pass_times) / len(forward_pass_times)}s')
 print(f'Tokenization: {sum(feature_preparation_times) / len(feature_preparation_times)}s')
+
