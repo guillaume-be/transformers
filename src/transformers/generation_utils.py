@@ -15,12 +15,12 @@
 # limitations under the License.
 
 import logging
+import time
 from typing import Iterable, Optional, Tuple
 
 import torch
 from torch import Tensor
 from torch.nn import functional as F
-
 
 logger = logging.getLogger(__name__)
 
@@ -55,18 +55,18 @@ class GenerationMixin:
                     lprobs[i, previous_token] /= repetition_penalty
 
     def postprocess_next_token_scores(
-        self,
-        scores,
-        input_ids,
-        no_repeat_ngram_size,
-        bad_words_ids,
-        cur_len,
-        min_length,
-        max_length,
-        eos_token_id,
-        repetition_penalty,
-        batch_size,
-        num_beams,
+            self,
+            scores,
+            input_ids,
+            no_repeat_ngram_size,
+            bad_words_ids,
+            cur_len,
+            min_length,
+            max_length,
+            eos_token_id,
+            repetition_penalty,
+            batch_size,
+            num_beams,
     ):
         # repetition penalty (from CTRL paper https://arxiv.org/abs/1909.05858)
         if repetition_penalty != 1.0:
@@ -91,36 +91,36 @@ class GenerationMixin:
         if bad_words_ids is not None:
             # calculate a list of banned tokens according to bad words
             banned_tokens = calc_banned_bad_words_ids(input_ids, bad_words_ids)
-
-            for i, banned_tokens in enumerate(banned_tokens):
-                scores[i, banned_tokens] = -float("inf")
+            banned_mask = torch.zeros_like(scores)
+            banned_mask[torch.arange(banned_mask.size(0), dtype=torch.long), banned_tokens] = 1
+            scores.masked_fill_(banned_mask.bool(), -float("inf"))
 
         return scores
 
     @torch.no_grad()
     def generate(
-        self,
-        input_ids: Optional[torch.LongTensor] = None,
-        max_length: Optional[int] = None,
-        min_length: Optional[int] = None,
-        do_sample: Optional[bool] = None,
-        early_stopping: Optional[bool] = None,
-        num_beams: Optional[int] = None,
-        temperature: Optional[float] = None,
-        top_k: Optional[int] = None,
-        top_p: Optional[float] = None,
-        repetition_penalty: Optional[float] = None,
-        bad_words_ids: Optional[Iterable[int]] = None,
-        bos_token_id: Optional[int] = None,
-        pad_token_id: Optional[int] = None,
-        eos_token_id: Optional[int] = None,
-        length_penalty: Optional[float] = None,
-        no_repeat_ngram_size: Optional[int] = None,
-        num_return_sequences: Optional[int] = None,
-        attention_mask: Optional[torch.LongTensor] = None,
-        decoder_start_token_id: Optional[int] = None,
-        use_cache: Optional[bool] = None,
-        **model_specific_kwargs
+            self,
+            input_ids: Optional[torch.LongTensor] = None,
+            max_length: Optional[int] = None,
+            min_length: Optional[int] = None,
+            do_sample: Optional[bool] = None,
+            early_stopping: Optional[bool] = None,
+            num_beams: Optional[int] = None,
+            temperature: Optional[float] = None,
+            top_k: Optional[int] = None,
+            top_p: Optional[float] = None,
+            repetition_penalty: Optional[float] = None,
+            bad_words_ids: Optional[Iterable[int]] = None,
+            bos_token_id: Optional[int] = None,
+            pad_token_id: Optional[int] = None,
+            eos_token_id: Optional[int] = None,
+            length_penalty: Optional[float] = None,
+            no_repeat_ngram_size: Optional[int] = None,
+            num_return_sequences: Optional[int] = None,
+            attention_mask: Optional[torch.LongTensor] = None,
+            decoder_start_token_id: Optional[int] = None,
+            use_cache: Optional[bool] = None,
+            **model_specific_kwargs
     ) -> torch.LongTensor:
         r""" Generates sequences for models with a LM head. The method currently supports greedy decoding, beam-search decoding, sampling with temperature, sampling with top-k or nucleus sampling.
 
@@ -250,7 +250,7 @@ class GenerationMixin:
                 "You tried to generate sequences with a model that does not have a LM Head."
                 "Please use another model class (e.g. `OpenAIGPTLMHeadModel`, `XLNetLMHeadModel`, `GPT2LMHeadModel`, `CTRLLMHeadModel`, `T5WithLMHeadModel`, `TransfoXLLMHeadModel`, `XLMWithLMHeadModel`, `BartForConditionalGeneration` )"
             )
-
+        t1 = time.time()
         max_length = max_length if max_length is not None else self.config.max_length
         min_length = min_length if min_length is not None else self.config.min_length
         do_sample = do_sample if do_sample is not None else self.config.do_sample
@@ -292,23 +292,23 @@ class GenerationMixin:
         assert 0 <= top_p <= 1, "`top_p` should be between 0 and 1."
         assert repetition_penalty >= 1.0, "`repetition_penalty` should be >= 1."
         assert input_ids is not None or (
-            isinstance(bos_token_id, int) and bos_token_id >= 0
+                isinstance(bos_token_id, int) and bos_token_id >= 0
         ), "If input_ids is not defined, `bos_token_id` should be a positive integer."
         assert pad_token_id is None or (
-            isinstance(pad_token_id, int) and (pad_token_id >= 0)
+                isinstance(pad_token_id, int) and (pad_token_id >= 0)
         ), "`pad_token_id` should be a positive integer."
         assert (eos_token_id is None) or (
-            isinstance(eos_token_id, int) and (eos_token_id >= 0)
+                isinstance(eos_token_id, int) and (eos_token_id >= 0)
         ), "`eos_token_id` should be a positive integer."
         assert length_penalty > 0, "`length_penalty` should be strictly positive."
         assert (
-            isinstance(no_repeat_ngram_size, int) and no_repeat_ngram_size >= 0
+                isinstance(no_repeat_ngram_size, int) and no_repeat_ngram_size >= 0
         ), "`no_repeat_ngram_size` should be a positive integer."
         assert (
-            isinstance(num_return_sequences, int) and num_return_sequences > 0
+                isinstance(num_return_sequences, int) and num_return_sequences > 0
         ), "`num_return_sequences` should be a strictly positive integer."
         assert (
-            bad_words_ids is None or isinstance(bad_words_ids, list) and isinstance(bad_words_ids[0], list)
+                bad_words_ids is None or isinstance(bad_words_ids, list) and isinstance(bad_words_ids[0], list)
         ), "`bad_words_ids` is either `None` or a list of lists of tokens that should not be generated"
 
         if input_ids is None:
@@ -327,13 +327,13 @@ class GenerationMixin:
             if num_beams == 1:
                 # no_beam_search greedy generation conditions
                 assert (
-                    num_return_sequences == 1
+                        num_return_sequences == 1
                 ), "Greedy decoding will always produce the same output for num_beams == 1 and num_return_sequences > 1. Please set num_return_sequences = 1"
 
             else:
                 # beam_search greedy generation conditions
                 assert (
-                    num_beams >= num_return_sequences
+                        num_beams >= num_return_sequences
                 ), "Greedy beam search decoding cannot return more sequences than it has beams. Please set num_beams >= num_return_sequences"
 
         # create attention mask if necessary
@@ -355,9 +355,9 @@ class GenerationMixin:
         if hasattr(self.config, "vocab_size"):
             vocab_size = self.config.vocab_size
         elif (
-            self.config.is_encoder_decoder
-            and hasattr(self.config, "decoder")
-            and hasattr(self.config.decoder, "vocab_size")
+                self.config.is_encoder_decoder
+                and hasattr(self.config, "decoder")
+                and hasattr(self.config.decoder, "vocab_size")
         ):
             vocab_size = self.config.decoder.vocab_size
 
@@ -374,7 +374,7 @@ class GenerationMixin:
                 decoder_start_token_id = bos_token_id
 
             assert (
-                decoder_start_token_id is not None
+                    decoder_start_token_id is not None
             ), "decoder_start_token_id or bos_token_id has to be defined for encoder-decoder generation"
             assert hasattr(self, "get_encoder"), "{} should have a 'get_encoder' function defined".format(self)
             assert callable(self.get_encoder), "{} should be a method".format(self.get_encoder)
@@ -410,16 +410,16 @@ class GenerationMixin:
             cur_len = 1
 
             assert (
-                batch_size == encoder_outputs[0].shape[0]
+                    batch_size == encoder_outputs[0].shape[0]
             ), f"expected encoder_outputs[0] to have 1st dimension bs={batch_size}, got {encoder_outputs[0].shape[0]} "
 
             # expand batch_idx to assign correct encoder output for expanded input_ids (due to num_beams > 1 and num_return_sequences > 1)
             expanded_batch_idxs = (
                 torch.arange(batch_size)
-                .view(-1, 1)
-                .repeat(1, num_beams * effective_batch_mult)
-                .view(-1)
-                .to(input_ids.device)
+                    .view(-1, 1)
+                    .repeat(1, num_beams * effective_batch_mult)
+                    .view(-1)
+                    .to(input_ids.device)
             )
             # expand encoder_outputs
             encoder_outputs = (encoder_outputs[0].index_select(0, expanded_batch_idxs), *encoder_outputs[1:])
@@ -429,9 +429,10 @@ class GenerationMixin:
             cur_len = input_ids.shape[-1]
 
         assert (
-            cur_len < max_length
+                cur_len < max_length
         ), f"The context has {cur_len} number of tokens, but `max_length` is only {max_length}. Please make sure that `max_length` is bigger than the number of tokens, by setting either `generate(max_length=...,...)` or `config.max_length = ...`"
-
+        t2 = time.time()
+        print(f'preparation time:: {t2 - t1}s')
         if num_beams > 1:
             output = self._generate_beam_search(
                 input_ids,
@@ -483,25 +484,25 @@ class GenerationMixin:
         return output
 
     def _generate_no_beam_search(
-        self,
-        input_ids,
-        cur_len,
-        max_length,
-        min_length,
-        do_sample,
-        temperature,
-        top_k,
-        top_p,
-        repetition_penalty,
-        no_repeat_ngram_size,
-        bad_words_ids,
-        pad_token_id,
-        eos_token_id,
-        batch_size,
-        encoder_outputs,
-        attention_mask,
-        use_cache,
-        model_specific_kwargs,
+            self,
+            input_ids,
+            cur_len,
+            max_length,
+            min_length,
+            do_sample,
+            temperature,
+            top_k,
+            top_p,
+            repetition_penalty,
+            no_repeat_ngram_size,
+            bad_words_ids,
+            pad_token_id,
+            eos_token_id,
+            batch_size,
+            encoder_outputs,
+            attention_mask,
+            use_cache,
+            model_specific_kwargs,
     ):
         """ Generate sequences for each example without beam search (num_beams == 1).
             All returned sequence are generated independantly.
@@ -583,34 +584,40 @@ class GenerationMixin:
         return input_ids
 
     def _generate_beam_search(
-        self,
-        input_ids,
-        cur_len,
-        max_length,
-        min_length,
-        do_sample,
-        early_stopping,
-        temperature,
-        top_k,
-        top_p,
-        repetition_penalty,
-        no_repeat_ngram_size,
-        bad_words_ids,
-        pad_token_id,
-        eos_token_id,
-        batch_size,
-        num_return_sequences,
-        length_penalty,
-        num_beams,
-        vocab_size,
-        encoder_outputs,
-        attention_mask,
-        use_cache,
-        model_specific_kwargs,
+            self,
+            input_ids,
+            cur_len,
+            max_length,
+            min_length,
+            do_sample,
+            early_stopping,
+            temperature,
+            top_k,
+            top_p,
+            repetition_penalty,
+            no_repeat_ngram_size,
+            bad_words_ids,
+            pad_token_id,
+            eos_token_id,
+            batch_size,
+            num_return_sequences,
+            length_penalty,
+            num_beams,
+            vocab_size,
+            encoder_outputs,
+            attention_mask,
+            use_cache,
+            model_specific_kwargs,
     ):
         """ Generate sequences for each example with beam search.
         """
-
+        input_preparation = []
+        forward_pass = []
+        adjust_logits = []
+        postprocessing = []
+        sampling = []
+        beam_update = []
+        t1 = time.time()
         # generated hypotheses
         generated_hyps = [
             BeamHypotheses(num_beams, max_length, length_penalty, early_stopping=early_stopping)
@@ -631,13 +638,19 @@ class GenerationMixin:
         # done sentences
         done = [False for _ in range(batch_size)]
 
+        t2 = time.time()
+        print(f'beam search preparation time:: {t2 - t1}s')
         while cur_len < max_length:
+            t1 = time.time()
             model_inputs = self.prepare_inputs_for_generation(
                 input_ids, past=past, attention_mask=attention_mask, use_cache=use_cache, **model_specific_kwargs
             )
+            t2 = time.time()
+            input_preparation.append(t2 - t1)
             outputs = self(**model_inputs)  # (batch_size * num_beams, cur_len, vocab_size)
             next_token_logits = outputs[0][:, -1, :]  # (batch_size * num_beams, vocab_size)
-
+            t3 = time.time()
+            forward_pass.append(t3 - t2)
             # if model has past, then set the past variable to speed up decoding
             if self._use_cache(outputs, use_cache):
                 past = outputs[1]
@@ -646,7 +659,8 @@ class GenerationMixin:
                 next_token_logits = self.adjust_logits_during_generation(
                     next_token_logits, cur_len=cur_len, max_length=max_length
                 )
-
+            t4 = time.time()
+            adjust_logits.append(t4 - t3)
             scores = F.log_softmax(next_token_logits, dim=-1)  # (batch_size * num_beams, vocab_size)
 
             scores = self.postprocess_next_token_scores(
@@ -662,6 +676,8 @@ class GenerationMixin:
                 batch_size=batch_size,
                 num_beams=num_beams,
             )
+            t5 = time.time()
+            postprocessing.append(t5 - t4)
 
             assert scores.shape == (batch_size * num_beams, vocab_size), "Shapes of scores: {} != {}".format(
                 scores.shape, (batch_size * num_beams, vocab_size)
@@ -699,7 +715,8 @@ class GenerationMixin:
                 )  # (batch_size, num_beams * vocab_size)
 
                 next_scores, next_tokens = torch.topk(next_scores, 2 * num_beams, dim=1, largest=True, sorted=True)
-
+            t6 = time.time()
+            sampling.append(t6 - t5)
             assert next_scores.size() == next_tokens.size() == (batch_size, 2 * num_beams)
 
             # next batch beam content
@@ -711,10 +728,10 @@ class GenerationMixin:
                 # if we are done with this sentence, add a pad token
                 if done[batch_idx]:
                     assert (
-                        len(generated_hyps[batch_idx]) >= num_beams
+                            len(generated_hyps[batch_idx]) >= num_beams
                     ), "Batch can only be done if at least {} beams have been generated".format(num_beams)
                     assert (
-                        eos_token_id is not None and pad_token_id is not None
+                            eos_token_id is not None and pad_token_id is not None
                     ), "generated beams >= num_beams -> eos_token_id and pad_token have to be defined"
                     next_batch_beam.extend([(0, pad_token_id, 0)] * num_beams)  # pad the batch
                     continue
@@ -724,7 +741,7 @@ class GenerationMixin:
 
                 # next tokens for this sentence
                 for beam_token_rank, (beam_token_id, beam_token_score) in enumerate(
-                    zip(next_tokens[batch_idx], next_scores[batch_idx])
+                        zip(next_tokens[batch_idx], next_scores[batch_idx])
                 ):
                     # get beam and token IDs
                     beam_id = beam_token_id // vocab_size
@@ -747,7 +764,6 @@ class GenerationMixin:
                     # once the beam for next step is full, don't add more tokens to it.
                     if len(next_sent_beam) == num_beams:
                         break
-
                 # Check if we are done so that we can save a pad step if all(done)
                 done[batch_idx] = done[batch_idx] or generated_hyps[batch_idx].is_done(
                     next_scores[batch_idx].max().item(), cur_len
@@ -782,7 +798,9 @@ class GenerationMixin:
                 attention_mask = torch.cat(
                     [attention_mask, attention_mask.new_ones((attention_mask.shape[0], 1))], dim=-1
                 )
-
+            t7 = time.time()
+            beam_update.append(t7 - t6)
+        t1 = time.time()
         # finalize all open beam hypotheses and add to generated hypotheses
         for batch_idx in range(batch_size):
             if done[batch_idx]:
@@ -790,7 +808,7 @@ class GenerationMixin:
 
             # test that beam scores match previously calculated scores if not eos and batch_idx not done
             if eos_token_id is not None and all(
-                (token_id % vocab_size).item() != eos_token_id for token_id in next_tokens[batch_idx]
+                    (token_id % vocab_size).item() != eos_token_id for token_id in next_tokens[batch_idx]
             ):
                 assert torch.all(
                     next_scores[batch_idx, :num_beams] == beam_scores.view(batch_size, num_beams)[batch_idx]
@@ -837,7 +855,14 @@ class GenerationMixin:
             # none of the hypotheses have an eos_token
             assert (len(hypo) == max_length for hypo in best)
             decoded = torch.stack(best).type(torch.long).to(next(self.parameters()).device)
-
+        t2 = time.time()
+        print(f'input preparation: {sum(input_preparation)}s')
+        print(f'forward_pass: {sum(forward_pass)}s')
+        print(f'adjust_logits: {sum(adjust_logits)}s')
+        print(f'postprocessing: {sum(postprocessing)}s')
+        print(f'sampling: {sum(sampling)}s')
+        print(f'beam_update: {sum(beam_update)}s')
+        print(f'decoding: {t2 - t1}s')
         return decoded
 
     @staticmethod
@@ -879,7 +904,7 @@ def calc_banned_bad_words_ids(prev_input_ids: Iterable[int], bad_words_ids: Iter
             # if bad word tokens are longer then prev input_ids they can't be equal
             return False
 
-        if prev_tokens[-len(tokens) :] == tokens:
+        if prev_tokens[-len(tokens):] == tokens:
             # if tokens match
             return True
         else:
@@ -905,11 +930,11 @@ def calc_banned_bad_words_ids(prev_input_ids: Iterable[int], bad_words_ids: Iter
 
 
 def top_k_top_p_filtering(
-    logits: Tensor,
-    top_k: int = 0,
-    top_p: float = 1.0,
-    filter_value: float = -float("Inf"),
-    min_tokens_to_keep: int = 1,
+        logits: Tensor,
+        top_k: int = 0,
+        top_p: float = 1.0,
+        filter_value: float = -float("Inf"),
+        min_tokens_to_keep: int = 1,
 ) -> Tensor:
     """ Filter a distribution of logits using top-k and/or nucleus (top-p) filtering
         Args:

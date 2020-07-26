@@ -28,36 +28,36 @@ TEXTS_TO_TRANSLATE = [
     "According to The Guardian, astronomers were optimistic that NASA's James Webb space telescope — scheduled for launch in 2021 — and the European Space Agency's 2028 ARIEL program, could reveal more about exoplanets like K2-18b."]
 
 generation_times = []
-n_iter = 10
+n_iter = 1
 loading_times = []
 feature_preparation_times = []
 forward_pass_times = []
 
-for i in range(n_iter):
-    t1 = time.time()
-    model = AutoModelWithLMHead.from_pretrained('Helsinki-NLP/opus-mt-en-ROMANCE').cuda()
-    tokenizer = AutoTokenizer.from_pretrained('Helsinki-NLP/opus-mt-en-ROMANCE')
-    pipeline = TranslationPipeline(model=model, tokenizer=tokenizer, device=0)
-    t2 = time.time()
-    loading_times.append(t2 - t1)
-
-for _ in range(n_iter):
-    t1 = time.time()
-    with torch.no_grad():
-        outputs = pipeline._parse_and_tokenize(TEXTS_TO_TRANSLATE, padding=True)
-        t2 = time.time()
-        feature_preparation_times.append(t2 - t1)
+# for i in range(n_iter):
+#     t1 = time.time()
+#     model = AutoModelWithLMHead.from_pretrained('Helsinki-NLP/opus-mt-en-ROMANCE').cuda()
+#     tokenizer = AutoTokenizer.from_pretrained('Helsinki-NLP/opus-mt-en-ROMANCE')
+#     pipeline = TranslationPipeline(model=model, tokenizer=tokenizer, device=0)
+#     t2 = time.time()
+#     loading_times.append(t2 - t1)
+#
+# for _ in range(n_iter):
+#     t1 = time.time()
+#     with torch.no_grad():
+#         outputs = pipeline._parse_and_tokenize(TEXTS_TO_TRANSLATE, padding=True)
+#         t2 = time.time()
+#         feature_preparation_times.append(t2 - t1)
 
 for _ in range(n_iter):
     t1 = time.time()
     with torch.no_grad():
         outputs = pipeline(TEXTS_TO_TRANSLATE, num_beams=6, early_stopping=True, max_length=512)
-        # for output in outputs:
-        #     print(output)
         t2 = time.time()
         forward_pass_times.append(t2 - t1)
         
-print(f'Loading: {sum(loading_times) / len(loading_times)}s')
+# print(f'Loading: {sum(loading_times) / len(loading_times)}s')
+# print(f'Tokenization: {sum(feature_preparation_times) / len(feature_preparation_times)}s')
 print(f'Inference: {sum(forward_pass_times) / len(forward_pass_times)}s')
-print(f'Tokenization: {sum(feature_preparation_times) / len(feature_preparation_times)}s')
+for output in outputs:
+    print(output)
 

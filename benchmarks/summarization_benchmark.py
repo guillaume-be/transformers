@@ -40,21 +40,21 @@ loading_times = []
 feature_preparation_times = []
 forward_pass_times = []
 
-for i in range(n_iter):
-    t1 = time.time()
-    tokenizer = BartTokenizer.from_pretrained('facebook/bart-large-cnn')
-    model = BartForConditionalGeneration.from_pretrained('facebook/bart-large-cnn').cuda()
-    t2 = time.time()
-    loading_times.append(t2 - t1)
-
-for _ in range(n_iter):
-    t1 = time.time()
-    encoded_input = [tokenizer.encode(text, add_special_tokens=True) for text in TEXT_TO_SUMMARIZE]
-    max_len = max([len(sentence) for sentence in encoded_input])
-    encoded_input = [sequence + (max_len - len(sequence)) * [0] for sequence in encoded_input]
-    encoded_input = torch.Tensor(encoded_input).long().cuda()
-    t2 = time.time()
-    feature_preparation_times.append(t2 - t1)
+# for i in range(n_iter):
+#     t1 = time.time()
+#     tokenizer = BartTokenizer.from_pretrained('facebook/bart-large-cnn')
+#     model = BartForConditionalGeneration.from_pretrained('facebook/bart-large-cnn').cuda()
+#     t2 = time.time()
+#     loading_times.append(t2 - t1)
+#
+# for _ in range(n_iter):
+#     t1 = time.time()
+#     encoded_input = [tokenizer.encode(text, add_special_tokens=True) for text in TEXT_TO_SUMMARIZE]
+#     max_len = max([len(sentence) for sentence in encoded_input])
+#     encoded_input = [sequence + (max_len - len(sequence)) * [0] for sequence in encoded_input]
+#     encoded_input = torch.Tensor(encoded_input).long().cuda()
+#     t2 = time.time()
+#     feature_preparation_times.append(t2 - t1)
 
 
 for _ in range(n_iter):
@@ -78,5 +78,5 @@ for _ in range(n_iter):
         forward_pass_times.append(t2 - t1)
 
 print(f'Inference: {sum(forward_pass_times) / len(forward_pass_times)}s')
-print(f'Feature generation: {sum(feature_preparation_times) / len(feature_preparation_times)}s')
-print(f'Loading: {sum(loading_times) / len(loading_times)}s')
+# print(f'Feature generation: {sum(feature_preparation_times) / len(feature_preparation_times)}s')
+# print(f'Loading: {sum(loading_times) / len(loading_times)}s')
