@@ -2,14 +2,14 @@ import time
 import torch
 from transformers import TranslationPipeline, AutoModelWithLMHead, AutoTokenizer
 
-model = AutoModelWithLMHead.from_pretrained('Helsinki-NLP/opus-mt-en-ROMANCE').cuda()
-tokenizer = AutoTokenizer.from_pretrained('Helsinki-NLP/opus-mt-en-ROMANCE')
+# model = AutoModelWithLMHead.from_pretrained('Helsinki-NLP/opus-mt-en-ROMANCE').cuda()
+# tokenizer = AutoTokenizer.from_pretrained('Helsinki-NLP/opus-mt-en-ROMANCE')
 
-# model = AutoModelWithLMHead.from_pretrained('t5-base').cuda()
-# tokenizer = AutoTokenizer.from_pretrained('t5-base')
+model = AutoModelWithLMHead.from_pretrained('t5-base').cuda()
+tokenizer = AutoTokenizer.from_pretrained('t5-base')
 pipeline = TranslationPipeline(model=model, tokenizer=tokenizer, device=0)
-pipeline.model.config.prefix = ">>fr<<"
-# pipeline.model.config.prefix = "translate English to French: "
+# pipeline.model.config.prefix = ">>fr<<"
+pipeline.model.config.prefix = "translate English to French: "
 
 
 TEXTS_TO_TRANSLATE = [

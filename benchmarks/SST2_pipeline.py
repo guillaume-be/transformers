@@ -42,7 +42,7 @@ if __name__ == '__main__':
 
     processor = Sst2Processor()
     data = processor.get_train_examples(root_path)
-    data = [example.text_a for example in data[:5000]]
+    data = [example.text_a for example in data[:1000]]
 
     for i in range(n_iter):
         t1 = time.time()
