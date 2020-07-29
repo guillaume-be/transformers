@@ -1466,7 +1466,7 @@ class PreTrainedTokenizerBase(SpecialTokensMixin):
                     "use `padding='max_length'` to pad to a max length. In this case, you can give a specific "
                     "length with `max_length` (e.g. `max_length=45`) or leave max_length to None to pad to the "
                     "maximal input size of the model (e.g. 512 for Bert).",
-                    DeprecationWarning,
+                    FutureWarning,
                 )
             if max_length is None:
                 padding_strategy = PaddingStrategy.LONGEST
@@ -1492,7 +1492,7 @@ class PreTrainedTokenizerBase(SpecialTokensMixin):
                     "`truncation='only_first'` (will only truncate the first sentence in the pairs) "
                     "`truncation='only_second'` (will only truncate the second sentence in the pairs) "
                     "or `truncation='longest_first'` (will iteratively remove tokens from the longest sentence in the pairs).",
-                    DeprecationWarning,
+                    FutureWarning,
                 )
             truncation_strategy = TruncationStrategy(old_truncation_strategy)
         elif truncation is not False:
@@ -2255,8 +2255,23 @@ class PreTrainedTokenizerBase(SpecialTokensMixin):
 
         return encoded_inputs
 
-    def batch_decode(self, sequences: List[List[int]], **kwargs) -> List[str]:
-        return [self.decode(seq, **kwargs) for seq in sequences]
+    def batch_decode(
+        self, sequences: List[List[int]], skip_special_tokens: bool = False, clean_up_tokenization_spaces: bool = True
+    ) -> List[str]:
+        """
+        Convert a list of lists of token ids into a list of strings by calling decode.
+
+        Args:
+            token_ids: list of tokenized input ids. Can be obtained using the `encode` or `encode_plus` methods.
+            skip_special_tokens: if set to True, will replace special tokens.
+            clean_up_tokenization_spaces: if set to True, will clean up the tokenization spaces.
+        """
+        return [
+            self.decode(
+                seq, skip_special_tokens=skip_special_tokens, clean_up_tokenization_spaces=clean_up_tokenization_spaces
+            )
+            for seq in sequences
+        ]
 
     def decode(
         self, token_ids: List[int], skip_special_tokens: bool = False, clean_up_tokenization_spaces: bool = True
