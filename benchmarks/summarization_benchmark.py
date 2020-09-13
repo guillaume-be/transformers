@@ -1,3 +1,4 @@
+import math
 import time
 
 import torch
@@ -10,6 +11,13 @@ model = BartForConditionalGeneration.from_pretrained('facebook/bart-large-cnn').
 # model.model.output_attentions = True
 # model.model.output_hidden_states = True
 model = model.eval()
+
+def stdev(series):
+    mean = sum(forward_pass_times) / len(forward_pass_times)
+    return math.sqrt(
+        sum([(forward - mean) ** 2.0 for forward in series])
+        / len(forward_pass_times))
+
 
 TEXT_TO_SUMMARIZE = ["""In findings published Tuesday in Cornell University's arXiv by a team of scientists \
 from the University of Montreal and a separate report published Wednesday in Nature Astronomy by a team \
@@ -40,13 +48,13 @@ loading_times = []
 feature_preparation_times = []
 forward_pass_times = []
 
-# for i in range(n_iter):
-#     t1 = time.time()
-#     tokenizer = BartTokenizer.from_pretrained('facebook/bart-large-cnn')
-#     model = BartForConditionalGeneration.from_pretrained('facebook/bart-large-cnn').cuda()
-#     t2 = time.time()
-#     loading_times.append(t2 - t1)
-#
+for i in range(n_iter):
+    t1 = time.time()
+    tokenizer = BartTokenizer.from_pretrained('facebook/bart-large-cnn')
+    model = BartForConditionalGeneration.from_pretrained('facebook/bart-large-cnn').cuda()
+    t2 = time.time()
+    loading_times.append(t2 - t1)
+
 # for _ in range(n_iter):
 #     t1 = time.time()
 #     encoded_input = [tokenizer.encode(text, add_special_tokens=True) for text in TEXT_TO_SUMMARIZE]
@@ -78,5 +86,6 @@ for _ in range(n_iter):
         forward_pass_times.append(t2 - t1)
 
 print(f'Inference: {sum(forward_pass_times) / len(forward_pass_times)}s')
-# print(f'Feature generation: {sum(feature_preparation_times) / len(feature_preparation_times)}s')
-# print(f'Loading: {sum(loading_times) / len(loading_times)}s')
+print(f'Stddev: {stdev(forward_pass_times)}s')
+print(f'Loading: {sum(loading_times) / len(loading_times)}s')
+print(f'Stddev: {stdev(loading_times)}s')

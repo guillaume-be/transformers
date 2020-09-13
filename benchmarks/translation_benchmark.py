@@ -1,15 +1,22 @@
+import math
 import time
 import torch
 from transformers import TranslationPipeline, AutoModelWithLMHead, AutoTokenizer
 
-# model = AutoModelWithLMHead.from_pretrained('Helsinki-NLP/opus-mt-en-ROMANCE').cuda()
-# tokenizer = AutoTokenizer.from_pretrained('Helsinki-NLP/opus-mt-en-ROMANCE')
+model = AutoModelWithLMHead.from_pretrained('Helsinki-NLP/opus-mt-en-ROMANCE').cuda()
+tokenizer = AutoTokenizer.from_pretrained('Helsinki-NLP/opus-mt-en-ROMANCE')
 
-model = AutoModelWithLMHead.from_pretrained('t5-base').cuda()
-tokenizer = AutoTokenizer.from_pretrained('t5-base')
+# model = AutoModelWithLMHead.from_pretrained('t5-base').cuda()
+# tokenizer = AutoTokenizer.from_pretrained('t5-base')
 pipeline = TranslationPipeline(model=model, tokenizer=tokenizer, device=0)
-# pipeline.model.config.prefix = ">>fr<<"
-pipeline.model.config.prefix = "translate English to French: "
+pipeline.model.config.prefix = ">>fr<<"
+# pipeline.model.config.prefix = "translate English to French:"
+
+def stdev(series):
+    mean = sum(forward_pass_times) / len(forward_pass_times)
+    return math.sqrt(
+        sum([(forward - mean) ** 2.0 for forward in series])
+        / len(forward_pass_times))
 
 
 TEXTS_TO_TRANSLATE = [
@@ -28,18 +35,24 @@ TEXTS_TO_TRANSLATE = [
     "According to The Guardian, astronomers were optimistic that NASA's James Webb space telescope — scheduled for launch in 2021 — and the European Space Agency's 2028 ARIEL program, could reveal more about exoplanets like K2-18b."]
 
 generation_times = []
-n_iter = 1
+n_iter = 10
 loading_times = []
 feature_preparation_times = []
 forward_pass_times = []
 
-# for i in range(n_iter):
-#     t1 = time.time()
-#     model = AutoModelWithLMHead.from_pretrained('Helsinki-NLP/opus-mt-en-ROMANCE').cuda()
-#     tokenizer = AutoTokenizer.from_pretrained('Helsinki-NLP/opus-mt-en-ROMANCE')
-#     pipeline = TranslationPipeline(model=model, tokenizer=tokenizer, device=0)
-#     t2 = time.time()
-#     loading_times.append(t2 - t1)
+for i in range(n_iter):
+    t1 = time.time()
+    model = AutoModelWithLMHead.from_pretrained('Helsinki-NLP/opus-mt-en-ROMANCE').cuda()
+    tokenizer = AutoTokenizer.from_pretrained('Helsinki-NLP/opus-mt-en-ROMANCE')
+    # model = AutoModelWithLMHead.from_pretrained('t5-base').cuda()
+    # tokenizer = AutoTokenizer.from_pretrained('t5-base')
+
+    pipeline = TranslationPipeline(model=model, tokenizer=tokenizer, device=0)
+
+    pipeline.model.config.prefix = ">>fr<<"
+    # pipeline.model.config.prefix = "translate English to French:"
+    t2 = time.time()
+    loading_times.append(t2 - t1)
 #
 # for _ in range(n_iter):
 #     t1 = time.time()
@@ -55,9 +68,10 @@ for _ in range(n_iter):
         t2 = time.time()
         forward_pass_times.append(t2 - t1)
         
-# print(f'Loading: {sum(loading_times) / len(loading_times)}s')
-# print(f'Tokenization: {sum(feature_preparation_times) / len(feature_preparation_times)}s')
 print(f'Inference: {sum(forward_pass_times) / len(forward_pass_times)}s')
+print(f'Stddev: {stdev(forward_pass_times)}s')
+print(f'Loading: {sum(loading_times) / len(loading_times)}s')
+print(f'Stddev: {stdev(loading_times)}s')
 for output in outputs:
     print(output)
 
