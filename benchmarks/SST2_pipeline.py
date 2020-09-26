@@ -1,3 +1,4 @@
+import math
 import time
 
 import torch
@@ -6,6 +7,14 @@ from transformers.data.processors.glue import Sst2Processor
 
 from transformers import AutoTokenizer, AutoModelForSequenceClassification, DistilBertTokenizerFast
 from pathlib import Path
+
+
+def stdev(series):
+    mean = sum(forward_pass_times) / len(forward_pass_times)
+    return math.sqrt(
+        sum([(forward - mean) ** 2.0 for forward in series])
+        / len(forward_pass_times))
+
 
 if __name__ == '__main__':
 
@@ -30,7 +39,7 @@ if __name__ == '__main__':
 
     for i in range(n_iter):
         t1 = time.time()
-        tokenizer = DistilBertTokenizerFast.from_pretrained(str(vocab_path))
+        tokenizer = DistilBertTokenizerFast.from_pretrained("distilbert-base-uncased-finetuned-sst-2-english")
         model = AutoModelForSequenceClassification.from_pretrained(
             "distilbert-base-uncased-finetuned-sst-2-english").cuda()
         t2 = time.time()
@@ -42,7 +51,7 @@ if __name__ == '__main__':
 
     processor = Sst2Processor()
     data = processor.get_train_examples(root_path)
-    data = [example.text_a for example in data[:1000]]
+    data = [example.text_a for example in data[:2000]]
 
     for i in range(n_iter):
         t1 = time.time()
@@ -71,5 +80,6 @@ if __name__ == '__main__':
         forward_pass_times.append(t2 - t1)
 
     print(f'Inference: {sum(forward_pass_times) / len(forward_pass_times)}s')
-    print(f'Feature generation: {sum(feature_preparation_times) / len(feature_preparation_times)}s')
-    print(f'Total: {sum(loading_times) / len(loading_times)}s')
+    print(f'Stddev: {stdev(forward_pass_times)}s')
+    print(f'Loading: {sum(loading_times) / len(loading_times)}s')
+    print(f'Stddev: {stdev(loading_times)}s')
