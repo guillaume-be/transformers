@@ -69,6 +69,7 @@ try:
     import datasets  # noqa: F401
 
     _datasets_available = True
+    logger.debug(f"Succesfully imported datasets version {datasets.__version__}")
 
 except ImportError:
     _datasets_available = False
@@ -119,6 +120,16 @@ try:
 except ImportError:
     _has_apex = False
 
+
+try:
+    import faiss  # noqa: F401
+
+    _faiss_available = True
+    logger.debug(f"Succesfully imported faiss version {faiss.__version__}")
+except ImportError:
+    _faiss_available = False
+
+
 default_cache_path = os.path.join(torch_cache_home, "transformers")
 
 
@@ -141,6 +152,10 @@ DUMMY_MASK = [[1, 1, 1, 1, 1], [1, 1, 1, 0, 0], [0, 0, 0, 1, 1]]
 
 S3_BUCKET_PREFIX = "https://s3.amazonaws.com/models.huggingface.co/bert"
 CLOUDFRONT_DISTRIB_PREFIX = "https://cdn.huggingface.co"
+PRESET_MIRROR_DICT = {
+    "tuna": "https://mirrors.tuna.tsinghua.edu.cn/hugging-face-models",
+    "bfsu": "https://mirrors.bfsu.edu.cn/hugging-face-models",
+}
 
 
 def is_torch_available():
@@ -169,6 +184,10 @@ def is_py3nvml_available():
 
 def is_apex_available():
     return _has_apex
+
+
+def is_faiss_available():
+    return _faiss_available
 
 
 def add_start_docstrings(*docstr):
@@ -452,6 +471,7 @@ TF_SEQUENCE_CLASSIFICATION_SAMPLE = r"""
 
 TF_MASKED_LM_SAMPLE = r"""
     Example::
+
         >>> from transformers import {tokenizer_class}, {model_class}
         >>> import tensorflow as tf
 
@@ -570,7 +590,7 @@ def is_remote_url(url_or_filename):
     return parsed.scheme in ("http", "https")
 
 
-def hf_bucket_url(model_id: str, filename: str, use_cdn=True) -> str:
+def hf_bucket_url(model_id: str, filename: str, use_cdn=True, mirror=None) -> str:
     """
     Resolve a model identifier, and a file name, to a HF-hosted url
     on either S3 or Cloudfront (a Content Delivery Network, or CDN).
@@ -586,7 +606,13 @@ def hf_bucket_url(model_id: str, filename: str, use_cdn=True) -> str:
     are not shared between the two because the cached file's name contains
     a hash of the url.
     """
-    endpoint = CLOUDFRONT_DISTRIB_PREFIX if use_cdn else S3_BUCKET_PREFIX
+    endpoint = (
+        PRESET_MIRROR_DICT.get(mirror, mirror)
+        if mirror
+        else CLOUDFRONT_DISTRIB_PREFIX
+        if use_cdn
+        else S3_BUCKET_PREFIX
+    )
     legacy_format = "/" not in model_id
     if legacy_format:
         return f"{endpoint}/{model_id}-{filename}"

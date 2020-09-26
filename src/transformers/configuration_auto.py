@@ -24,11 +24,14 @@ from .configuration_bert_generation import BertGenerationConfig
 from .configuration_camembert import CAMEMBERT_PRETRAINED_CONFIG_ARCHIVE_MAP, CamembertConfig
 from .configuration_ctrl import CTRL_PRETRAINED_CONFIG_ARCHIVE_MAP, CTRLConfig
 from .configuration_distilbert import DISTILBERT_PRETRAINED_CONFIG_ARCHIVE_MAP, DistilBertConfig
+from .configuration_dpr import DPR_PRETRAINED_CONFIG_ARCHIVE_MAP, DPRConfig
 from .configuration_electra import ELECTRA_PRETRAINED_CONFIG_ARCHIVE_MAP, ElectraConfig
 from .configuration_encoder_decoder import EncoderDecoderConfig
 from .configuration_flaubert import FLAUBERT_PRETRAINED_CONFIG_ARCHIVE_MAP, FlaubertConfig
+from .configuration_fsmt import FSMT_PRETRAINED_CONFIG_ARCHIVE_MAP, FSMTConfig
 from .configuration_funnel import FUNNEL_PRETRAINED_CONFIG_ARCHIVE_MAP, FunnelConfig
 from .configuration_gpt2 import GPT2_PRETRAINED_CONFIG_ARCHIVE_MAP, GPT2Config
+from .configuration_layoutlm import LAYOUTLM_PRETRAINED_CONFIG_ARCHIVE_MAP, LayoutLMConfig
 from .configuration_longformer import LONGFORMER_PRETRAINED_CONFIG_ARCHIVE_MAP, LongformerConfig
 from .configuration_lxmert import LXMERT_PRETRAINED_CONFIG_ARCHIVE_MAP, LxmertConfig
 from .configuration_marian import MarianConfig
@@ -36,6 +39,7 @@ from .configuration_mbart import MBART_PRETRAINED_CONFIG_ARCHIVE_MAP, MBartConfi
 from .configuration_mobilebert import MobileBertConfig
 from .configuration_openai import OPENAI_GPT_PRETRAINED_CONFIG_ARCHIVE_MAP, OpenAIGPTConfig
 from .configuration_pegasus import PegasusConfig
+from .configuration_rag import RagConfig
 from .configuration_reformer import ReformerConfig
 from .configuration_retribert import RETRIBERT_PRETRAINED_CONFIG_ARCHIVE_MAP, RetriBertConfig
 from .configuration_roberta import ROBERTA_PRETRAINED_CONFIG_ARCHIVE_MAP, RobertaConfig
@@ -66,11 +70,14 @@ ALL_PRETRAINED_CONFIG_ARCHIVE_MAP = dict(
         T5_PRETRAINED_CONFIG_ARCHIVE_MAP,
         XLM_ROBERTA_PRETRAINED_CONFIG_ARCHIVE_MAP,
         FLAUBERT_PRETRAINED_CONFIG_ARCHIVE_MAP,
+        FSMT_PRETRAINED_CONFIG_ARCHIVE_MAP,
         ELECTRA_PRETRAINED_CONFIG_ARCHIVE_MAP,
         LONGFORMER_PRETRAINED_CONFIG_ARCHIVE_MAP,
         RETRIBERT_PRETRAINED_CONFIG_ARCHIVE_MAP,
         FUNNEL_PRETRAINED_CONFIG_ARCHIVE_MAP,
         LXMERT_PRETRAINED_CONFIG_ARCHIVE_MAP,
+        LAYOUTLM_PRETRAINED_CONFIG_ARCHIVE_MAP,
+        DPR_PRETRAINED_CONFIG_ARCHIVE_MAP,
     ]
     for key, value, in pretrained_map.items()
 )
@@ -94,6 +101,7 @@ CONFIG_MAPPING = OrderedDict(
         ("longformer", LongformerConfig),
         ("roberta", RobertaConfig),
         ("flaubert", FlaubertConfig),
+        ("fsmt", FSMTConfig),
         ("bert", BertConfig),
         ("openai-gpt", OpenAIGPTConfig),
         ("gpt2", GPT2Config),
@@ -105,6 +113,9 @@ CONFIG_MAPPING = OrderedDict(
         ("encoder-decoder", EncoderDecoderConfig),
         ("funnel", FunnelConfig),
         ("lxmert", LxmertConfig),
+        ("dpr", DPRConfig),
+        ("layoutlm", LayoutLMConfig),
+        ("rag", RagConfig),
     ]
 )
 
@@ -126,6 +137,7 @@ MODEL_NAMES_MAPPING = OrderedDict(
         ("longformer", "Longformer"),
         ("roberta", "RoBERTa"),
         ("flaubert", "FlauBERT"),
+        ("fsmt", "FairSeq Machine-Translation"),
         ("bert", "BERT"),
         ("openai-gpt", "OpenAI GPT"),
         ("gpt2", "OpenAI GPT-2"),
@@ -137,6 +149,9 @@ MODEL_NAMES_MAPPING = OrderedDict(
         ("encoder-decoder", "Encoder decoder"),
         ("funnel", "Funnel Transformer"),
         ("lxmert", "LXMERT"),
+        ("layoutlm", "LayoutLM"),
+        ("dpr", "DPR"),
+        ("rag", "RAG"),
     ]
 )
 
@@ -197,9 +212,7 @@ class AutoConfig:
     This is a generic configuration class that will be instantiated as one of the configuration classes of the library
     when created with the :meth:`~transformers.AutoConfig.from_pretrained` class method.
 
-    This method takes care of returning the correct model class instance
-    based on the `model_type` property of the config object, or when it's missing,
-    falling back to using pattern matching on the `pretrained_model_name_or_path` string.
+    This class cannot be instantiated directly using ``__init__()`` (throws an error).
     """
 
     def __init__(self):
@@ -222,58 +235,77 @@ class AutoConfig:
     @classmethod
     @replace_list_option_in_docstrings()
     def from_pretrained(cls, pretrained_model_name_or_path, **kwargs):
-        r""" Instantiates one of the configuration classes of the library
-        from a pre-trained model configuration.
+        r"""
+        Instantiate one of the configuration classes of the library from a pretrained model configuration.
 
-        The configuration class to instantiate is selected
-        based on the `model_type` property of the config object, or when it's missing,
-        falling back to using pattern matching on the `pretrained_model_name_or_path` string:
+        The configuration class to instantiate is selected based on the :obj:`model_type` property of the config
+        object that is loaded, or when it's missing, by falling back to using pattern matching on
+        :obj:`pretrained_model_name_or_path`:
 
         List options
 
         Args:
-            pretrained_model_name_or_path (:obj:`string`):
-                Is either: \
-                    - a string with the `shortcut name` of a pre-trained model configuration to load from cache or download, e.g.: ``bert-base-uncased``.
-                    - a string with the `identifier name` of a pre-trained model configuration that was user-uploaded to our S3, e.g.: ``dbmdz/bert-base-german-cased``.
-                    - a path to a `directory` containing a configuration file saved using the :func:`~transformers.PretrainedConfig.save_pretrained` method, e.g.: ``./my_model_directory/``.
-                    - a path or url to a saved configuration JSON `file`, e.g.: ``./my_model_directory/configuration.json``.
+            pretrained_model_name_or_path (:obj:`str`):
+                Can be either:
 
-            cache_dir (:obj:`string`, optional, defaults to `None`):
-                Path to a directory in which a downloaded pre-trained model
-                configuration should be cached if the standard cache should not be used.
+                    - A string with the `shortcut name` of a pretrained model configuration to load from cache or
+                      download, e.g., ``bert-base-uncased``.
+                    - A string with the `identifier name` of a pretrained model configuration that was user-uploaded to
+                      our S3, e.g., ``dbmdz/bert-base-german-cased``.
+                    - A path to a `directory` containing a configuration file saved using the
+                      :meth:`~transformers.PretrainedConfig.save_pretrained` method, or the
+                      :meth:`~transformers.PretrainedModel.save_pretrained` method, e.g., ``./my_model_directory/``.
+                    - A path or url to a saved configuration JSON `file`, e.g.,
+                      ``./my_model_directory/configuration.json``.
+            cache_dir (:obj:`str`, `optional`):
+                Path to a directory in which a downloaded pretrained model configuration should be cached if the
+                standard cache should not be used.
+            force_download (:obj:`bool`, `optional`, defaults to :obj:`False`):
+                Whether or not to force the (re-)download the model weights and configuration files and override the
+                cached versions if they exist.
+            resume_download (:obj:`bool`, `optional`, defaults to :obj:`False`):
+                Whether or not to delete incompletely received files. Will attempt to resume the download if such a
+                file exists.
+            proxies (:obj:`Dict[str, str]`, `optional`):
+                A dictionary of proxy servers to use by protocol or endpoint, e.g.,
+                :obj:`{'http': 'foo.bar:3128', 'http://hostname': 'foo.bar:4012'}`. The proxies are used on each
+                request.
+            return_unused_kwargs (:obj:`bool`, `optional`, defaults to :obj:`False`):
+                If :obj:`False`, then this function returns just the final configuration object.
 
-            force_download (:obj:`boolean`, optional, defaults to `False`):
-                Force to (re-)download the model weights and configuration files and override the cached versions if they exist.
-
-            resume_download (:obj:`boolean`, optional, defaults to `False`):
-                Do not delete incompletely received file. Attempt to resume the download if such a file exists.
-
-            proxies (:obj:`Dict[str, str]`, optional, defaults to `None`):
-                A dictionary of proxy servers to use by protocol or endpoint, e.g.: :obj:`{'http': 'foo.bar:3128', 'http://hostname': 'foo.bar:4012'}`.
-                The proxies are used on each request. See `the requests documentation <https://requests.readthedocs.io/en/master/user/advanced/#proxies>`__ for usage.
-
-            return_unused_kwargs (:obj:`boolean`, optional, defaults to `False`):
-                - If False, then this function returns just the final configuration object.
-                - If True, then this functions returns a tuple `(config, unused_kwargs)` where `unused_kwargs` is a dictionary consisting of the key/value pairs whose keys are not configuration attributes: ie the part of kwargs which has not been used to update `config` and is otherwise ignored.
-
-            kwargs (:obj:`Dict[str, any]`, optional, defaults to `{}`): key/value pairs with which to update the configuration object after loading.
-                - The values in kwargs of any keys which are configuration attributes will be used to override the loaded values.
-                - Behavior concerning key/value pairs whose keys are *not* configuration attributes is controlled by the `return_unused_kwargs` keyword parameter.
-
+                If :obj:`True`, then this functions returns a :obj:`Tuple(config, unused_kwargs)` where `unused_kwargs`
+                is a dictionary consisting of the key/value pairs whose keys are not configuration attributes: i.e.,
+                the part of ``kwargs`` which has not been used to update ``config`` and is otherwise ignored.
+            kwargs(additional keyword arguments, `optional`):
+                The values in kwargs of any keys which are configuration attributes will be used to override the loaded
+                values. Behavior concerning key/value pairs whose keys are *not* configuration attributes is
+                controlled by the ``return_unused_kwargs`` keyword parameter.
 
         Examples::
 
-            config = AutoConfig.from_pretrained('bert-base-uncased')  # Download configuration from S3 and cache.
-            config = AutoConfig.from_pretrained('./test/bert_saved_model/')  # E.g. config (or model) was saved using `save_pretrained('./test/saved_model/')`
-            config = AutoConfig.from_pretrained('./test/bert_saved_model/my_configuration.json')
-            config = AutoConfig.from_pretrained('bert-base-uncased', output_attentions=True, foo=False)
-            assert config.output_attentions == True
-            config, unused_kwargs = AutoConfig.from_pretrained('bert-base-uncased', output_attentions=True,
-                                                               foo=False, return_unused_kwargs=True)
-            assert config.output_attentions == True
-            assert unused_kwargs == {'foo': False}
+            >>> from transformers import AutoConfig
 
+            >>> # Download configuration from S3 and cache.
+            >>> config = AutoConfig.from_pretrained('bert-base-uncased')
+
+            >>> # Download configuration from S3 (user-uploaded) and cache.
+            >>> config = AutoConfig.from_pretrained('dbmdz/bert-base-german-cased')
+
+            >>> # If configuration file is in a directory (e.g., was saved using `save_pretrained('./test/saved_model/')`).
+            >>> config = AutoConfig.from_pretrained('./test/bert_saved_model/')
+
+            >>> # Load a specific configuration file.
+            >>> config = AutoConfig.from_pretrained('./test/bert_saved_model/my_configuration.json')
+
+            >>> # Change some config attributes when loading a pretrained config.
+            >>> config = AutoConfig.from_pretrained('bert-base-uncased', output_attentions=True, foo=False)
+            >>> config.output_attentions
+            True
+            >>> config, unused_kwargs = AutoConfig.from_pretrained('bert-base-uncased', output_attentions=True, foo=False, return_unused_kwargs=True)
+            >>> config.output_attentions
+            True
+            >>> config.unused_kwargs
+            {'foo': False}
         """
         config_dict, _ = PretrainedConfig.get_config_dict(pretrained_model_name_or_path, **kwargs)
 

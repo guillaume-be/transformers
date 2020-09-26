@@ -1,6 +1,9 @@
+#!/usr/bin/env python
+
 import argparse
 import gc
 import os
+import sys
 import warnings
 from pathlib import Path
 from typing import List
@@ -10,37 +13,25 @@ import torch
 from torch import nn
 from torch.nn import functional as F
 
-from lightning_base import generic_train
+from finetune import SummarizationModule, TranslationModule
+from finetune import main as ft_main
+from initialization_utils import copy_layers, init_student
 from transformers import AutoModelForSeq2SeqLM, MBartTokenizer, T5Config, T5ForConditionalGeneration
 from transformers.modeling_bart import shift_tokens_right
+from utils import (
+    any_requires_grad,
+    assert_all_frozen,
+    calculate_bleu,
+    freeze_params,
+    label_smoothed_nll_loss,
+    pickle_load,
+    use_task_specific_params,
+)
 
 
-try:
-    from .finetune import SummarizationModule, TranslationModule
-    from .finetune import main as ft_main
-    from .initialization_utils import copy_layers, init_student
-    from .utils import (
-        any_requires_grad,
-        assert_all_frozen,
-        calculate_bleu,
-        freeze_params,
-        label_smoothed_nll_loss,
-        pickle_load,
-        use_task_specific_params,
-    )
-except ImportError:
-    from finetune import SummarizationModule, TranslationModule
-    from finetune import main as ft_main
-    from initialization_utils import copy_layers, init_student
-    from utils import (
-        any_requires_grad,
-        assert_all_frozen,
-        calculate_bleu,
-        freeze_params,
-        label_smoothed_nll_loss,
-        pickle_load,
-        use_task_specific_params,
-    )
+# need the parent dir module
+sys.path.insert(2, str(Path(__file__).resolve().parents[1]))
+from lightning_base import generic_train  # noqa
 
 
 class BartSummarizationDistiller(SummarizationModule):
@@ -472,6 +463,7 @@ LAYERS_TO_COPY = {
         6: [0, 3, 6, 9, 12, 15],
         8: [0, 2, 4, 6, 8, 10, 12, 15],
         9: [0, 1, 3, 5, 7, 9, 11, 13, 15],
+        12: [0, 1, 2, 3, 4, 5, 6, 7, 9, 11, 13, 15],
         16: list(range(16)),
     },
     6: {1: [0], 2: [0, 5], 3: [0, 2, 5], 4: [0, 1, 3, 5], 6: list(range(6))},
