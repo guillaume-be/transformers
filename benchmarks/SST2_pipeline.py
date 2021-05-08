@@ -8,6 +8,10 @@ from transformers import DistilBertForSequenceClassification, DistilBertTokenize
     PreTrainedTokenizer
 from pathlib import Path
 
+# Run profiling:
+# python -mcProfile -o sst2.prof SST2_pipeline.py
+# tuna sst2.prof
+
 
 def load_model(model_name: str) -> (DistilBertForSequenceClassification, DistilBertTokenizerFast):
     _tokenizer = DistilBertTokenizer.from_pretrained(model_name)
