@@ -3,11 +3,13 @@ from typing import Union, Dict, List, Tuple
 
 from torch import nn, Tensor
 
-from transformers import BertTokenizer, BertForQuestionAnswering, BertTokenizerFast, PreTrainedTokenizer
-from transformers.data.processors.squad import squad_convert_examples_to_features, SquadV2Processor
+from transformers import BertTokenizer, BertForQuestionAnswering, BertTokenizerFast, PreTrainedTokenizer, \
+    PreTrainedTokenizerFast
+from transformers.data.processors.squad import squad_convert_examples_to_features, SquadV2Processor, SquadFeatures
 from pathlib import Path
 import torch
 import numpy as np
+
 
 # Select Fast or Slow tokenizer (
 # Run profiling:
@@ -115,7 +117,79 @@ def prepare_features(_data: List, _max_seq_length: int, _doc_stride: int, _max_q
     return features, batch_indices
 
 
-def post_process(_batch_features: List, _starts: Tensor, _ends: Tensor) -> List:
+def prepare_features_fast(_data: List, _max_seq_length: int, _doc_stride: int, _max_query_length: int, _batch_size: int,
+                          _tokenizer: PreTrainedTokenizerFast):
+    features_list = []
+    for example_idx, example in enumerate(_data):
+        # Define the side we want to truncate / pad and the text/pair sorting
+        question_first = bool(_tokenizer.padding_side == "right")
+
+        encoded_inputs = _tokenizer(
+            text=example.question_text if question_first else example.context_text,
+            text_pair=example.context_text if question_first else example.question_text,
+            padding="max_length",
+            truncation="only_second" if question_first else "only_first",
+            max_length=max_seq_length,
+            stride=doc_stride,
+            return_tensors="np",
+            return_token_type_ids=True,
+            return_overflowing_tokens=True,
+            return_offsets_mapping=True,
+            return_special_tokens_mask=True,
+        )
+
+        # When the input is too long, it's converted in a batch of inputs with overflowing tokens
+        # and a stride of overlap between the inputs. If a batch of inputs is given, a special output
+        # "overflow_to_sample_mapping" indicate which member of the encoded batch belong to which original batch sample.
+        # Here we tokenize examples one-by-one so we don't need to use "overflow_to_sample_mapping".
+        # "num_span" is the number of output samples generated from the overflowing tokens.
+        num_spans = len(encoded_inputs["input_ids"])
+
+        # p_mask: mask with 1 for token than cannot be in the answer (0 for token which can be in an answer)
+        # We put 0 on the tokens from the context and 1 everywhere else (question and special tokens)
+        p_mask = np.asarray(
+            [
+                [tok != 1 if question_first else 0 for tok in encoded_inputs.sequence_ids(span_id)]
+                for span_id in range(num_spans)
+            ]
+        )
+
+        # keep the cls_token unmasked (some models use it to indicate unanswerable questions)
+        if _tokenizer.cls_token_id is not None:
+            cls_index = np.nonzero(encoded_inputs["input_ids"] == _tokenizer.cls_token_id)
+            p_mask[cls_index] = 0
+
+        features = []
+        for span_idx in range(num_spans):
+            features.append(
+                SquadFeatures(
+                    input_ids=encoded_inputs["input_ids"][span_idx],
+                    attention_mask=encoded_inputs["attention_mask"][span_idx],
+                    token_type_ids=encoded_inputs["token_type_ids"][span_idx],
+                    p_mask=p_mask[span_idx].tolist(),
+                    encoding=encoded_inputs[span_idx],
+                    # We don't use the rest of the values - and actually
+                    # for Fast tokenizer we could totally avoid using SquadFeatures and SquadExample
+                    cls_index=None,
+                    token_to_orig_map={},
+                    example_index=example_idx,
+                    unique_id=0,
+                    paragraph_len=0,
+                    token_is_max_context=0,
+                    tokens=[],
+                    start_position=0,
+                    end_position=0,
+                    is_impossible=False,
+                    qas_id=None,
+                )
+            )
+        features_list.extend(features)
+
+    batch_indices = generate_batch_indices(features_list, _batch_size)
+    return features_list, batch_indices
+
+
+def post_process(_batch_features: List, _starts: Tensor, _ends: Tensor, _tokenizer: PreTrainedTokenizer) -> List:
     topk = 1
     example_to_feature_ids = dict()
     for feature_index, feature in enumerate(_batch_features):
@@ -146,19 +220,47 @@ def post_process(_batch_features: List, _starts: Tensor, _ends: Tensor) -> List:
             start_[0] = end_[0] = 0
 
             start_pos, end_pos, scores = decode(start_, end_, topk, max_answer_len)
-            char_to_word = np.array(example.char_to_word_offset)
-            # Convert the answer (tokens) back to the original text
-            answers += [
-                {
-                    "score": score.item(),
-                    "start": np.where(char_to_word == feature.token_to_orig_map[s])[0][0].item(),
-                    "end": np.where(char_to_word == feature.token_to_orig_map[e])[0][-1].item(),
-                    "answer": " ".join(
-                        example.doc_tokens[feature.token_to_orig_map[s]: feature.token_to_orig_map[e] + 1]
-                    ),
-                }
-                for s, e, score in zip(start_pos, end_pos, scores)
-            ]
+
+            if not _tokenizer.is_fast:
+                char_to_word = np.array(example.char_to_word_offset)
+                # Convert the answer (tokens) back to the original text
+                answers += [
+                    {
+                        "score": score.item(),
+                        "start": np.where(char_to_word == feature.token_to_orig_map[s])[0][0].item(),
+                        "end": np.where(char_to_word == feature.token_to_orig_map[e])[0][-1].item(),
+                        "answer": " ".join(
+                            example.doc_tokens[feature.token_to_orig_map[s]: feature.token_to_orig_map[e] + 1]
+                        ),
+                    }
+                    for s, e, score in zip(start_pos, end_pos, scores)
+                ]
+            else:
+                question_first = bool(_tokenizer.padding_side == "right")
+                enc = feature.encoding
+
+                # Sometimes the max probability token is in the middle of a word so:
+                # - we start by finding the right word containing the token with `token_to_word`
+                # - then we convert this word in a character span with `word_to_chars`
+                answers += [
+                    {
+                        "score": score.item(),
+                        "start": enc.word_to_chars(
+                            enc.token_to_word(s), sequence_index=1 if question_first else 0
+                        )[0],
+                        "end": enc.word_to_chars(enc.token_to_word(e), sequence_index=1 if question_first else 0)[
+                            1
+                        ],
+                        "answer": example.context_text[
+                                  enc.word_to_chars(enc.token_to_word(s), sequence_index=1 if question_first else 0)[
+                                      0
+                                  ]: enc.word_to_chars(enc.token_to_word(e), sequence_index=1 if question_first else 0)[
+                                      1
+                                  ]
+                                  ],
+                    }
+                    for s, e, score in zip(start_pos, end_pos, scores)
+                ]
             feature_id_start = max_feature_id
         answers = sorted(answers, key=lambda x: x["score"], reverse=True)[: topk]
         _all_answers += answers
@@ -174,8 +276,15 @@ def run_benchmark(_n_iter: int, _data: List, _tokenizer: PreTrainedTokenizer, _m
         t1 = time.time()
         _all_answers = []
         t_tokenization = time.time()
-        _features, _batch_indices = prepare_features(data, max_seq_length, doc_stride, max_query_length, batch_size,
-                                                     tokenizer)
+        if isinstance(_tokenizer, BertTokenizerFast):
+            _features, _batch_indices = prepare_features_fast(
+                data, max_seq_length, doc_stride, max_query_length, batch_size,
+                tokenizer)
+        else:
+            _features, _batch_indices = prepare_features(
+                data, max_seq_length, doc_stride, max_query_length, batch_size,
+                tokenizer)
+
         feature_preparation_times.append(time.time() - t_tokenization)
 
         for (_start, _end) in _batch_indices:
@@ -187,11 +296,12 @@ def run_benchmark(_n_iter: int, _data: List, _tokenizer: PreTrainedTokenizer, _m
                 # Retrieve the score for the context tokens only (removing question tokens)
                 _fw_args = {k: torch.tensor(v).cuda() for (k, v) in _fw_args.items()}
                 _model_outputs = model(**_fw_args)
-                _starts, _ends = _model_outputs['start_logits'].cpu().numpy(), _model_outputs['end_logits'].cpu().numpy()
+                _starts, _ends = _model_outputs['start_logits'].cpu().numpy(), _model_outputs[
+                    'end_logits'].cpu().numpy()
             torch.cuda.synchronize()
             t_forward = time.time()
             forward_times.append(t_forward - _t_batch)
-            _all_answers.extend(post_process(_batch_features, _starts, _ends))
+            _all_answers.extend(post_process(_batch_features, _starts, _ends, _tokenizer))
             postprocessing_time.append(time.time() - t_forward)
 
         total_times.append(time.time() - t1)
@@ -203,7 +313,6 @@ def run_benchmark(_n_iter: int, _data: List, _tokenizer: PreTrainedTokenizer, _m
 
 
 if __name__ == '__main__':
-
     # ========================
     # Settings
     # ========================
@@ -215,7 +324,7 @@ if __name__ == '__main__':
     max_answer_len = 15
     batch_size = 64
     n_iter = 2
-    fast_tokenizer = False
+    fast_tokenizer = True
     total_times = []
     feature_preparation_times = []
     forward_pass_times = []
@@ -233,21 +342,27 @@ if __name__ == '__main__':
     processor = SquadV2Processor()
     data = processor.get_dev_examples(root_path)[:1000]
 
-    # all_answers = []
-    # features, batch_indices = prepare_features(data, max_seq_length, doc_stride, max_query_length, batch_size,
-    #                                            tokenizer)
-    #
-    # for (start, end) in batch_indices:
-    #     t_batch = time.time()
-    #     batch_features = features[start: end]
-    #     fw_args = inputs_for_model([f.__dict__ for f in batch_features])
-    #
-    #     with torch.no_grad():
-    #         # Retrieve the score for the context tokens only (removing question tokens)
-    #         fw_args = {k: torch.tensor(v).cuda() for (k, v) in fw_args.items()}
-    #         model_outputs = model(**fw_args)
-    #         starts, ends = model_outputs['start_logits'].cpu().numpy(), model_outputs['end_logits'].cpu().numpy()
-    #     all_answers.extend(post_process(batch_features, starts, ends))
+    all_answers = []
+    if isinstance(tokenizer, BertTokenizerFast):
+        features, batch_indices = prepare_features_fast(
+            data, max_seq_length, doc_stride, max_query_length, batch_size,
+            tokenizer)
+    else:
+        features, batch_indices = prepare_features(
+            data, max_seq_length, doc_stride, max_query_length, batch_size,
+            tokenizer)
+
+    for (start, end) in batch_indices:
+        t_batch = time.time()
+        batch_features = features[start: end]
+        fw_args = inputs_for_model([f.__dict__ for f in batch_features])
+
+        with torch.no_grad():
+            # Retrieve the score for the context tokens only (removing question tokens)
+            fw_args = {k: torch.tensor(v).cuda() for (k, v) in fw_args.items()}
+            model_outputs = model(**fw_args)
+            starts, ends = model_outputs['start_logits'].cpu().numpy(), model_outputs['end_logits'].cpu().numpy()
+        all_answers.extend(post_process(batch_features, starts, ends, tokenizer))
 
     # ========================
     # Pipeline execution
