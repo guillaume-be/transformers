@@ -58,7 +58,7 @@ if __name__ == '__main__':
             doc_stride=doc_stride,
             max_query_length=max_query_length,
             is_training=False,
-            threads=multiprocessing.cpu_count()
+            threads=4
         )
 
         batch_indices = generate_batch_indices(features, batch_size)

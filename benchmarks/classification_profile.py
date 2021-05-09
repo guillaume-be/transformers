@@ -9,7 +9,7 @@ from transformers import DistilBertForSequenceClassification, DistilBertTokenize
 from pathlib import Path
 
 # Run profiling:
-# python -mcProfile -o sst2.prof SST2_pipeline.py
+# python -mcProfile -o sst2.prof classification_profile.py
 # tuna sst2.prof
 
 
