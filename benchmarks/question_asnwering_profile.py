@@ -11,7 +11,7 @@ import torch
 import numpy as np
 
 
-# Select Fast or Slow tokenizer (
+# Select Fast or Slow tokenizer
 # Run profiling:
 # python -mcProfile -o sst2.prof question_answering_profile.py
 # tuna sst2.prof
@@ -323,8 +323,8 @@ if __name__ == '__main__':
     max_query_length = 64
     max_answer_len = 15
     batch_size = 64
-    n_iter = 2
-    fast_tokenizer = True
+    n_iter = 10
+    fast_tokenizer = False
     total_times = []
     feature_preparation_times = []
     forward_pass_times = []

@@ -16,6 +16,7 @@
 
 import warnings
 from dataclasses import dataclass
+import time
 from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple, Union
 
 import torch
@@ -1754,8 +1755,10 @@ class GenerationMixin:
         beam_scores = beam_scores.view((batch_size * num_beams,))
 
         this_peer_finished = False  # used by synced_gpus only
+        forward_t = []
+        processing_t = []
         while True:
-
+            t0 = time.time()
             if synced_gpus:
                 # Under synced_gpus the `forward` call must continue until all gpus complete their sequence.
                 # The following logic allows an early break if all peers finished generating their sequence
@@ -1774,6 +1777,9 @@ class GenerationMixin:
                 output_attentions=output_attentions,
                 output_hidden_states=output_hidden_states,
             )
+            torch.cuda.synchronize()
+            t_forward = time.time()
+            forward_t.append(t_forward - t0)
 
             if synced_gpus and this_peer_finished:
                 cur_len = cur_len + 1
@@ -1848,6 +1854,8 @@ class GenerationMixin:
                 else:
                     this_peer_finished = True
 
+            processing_t.append(time.time() - t_forward)
+
         sequence_outputs = beam_scorer.finalize(
             input_ids,
             beam_scores,
@@ -1881,7 +1889,7 @@ class GenerationMixin:
                     hidden_states=decoder_hidden_states,
                 )
         else:
-            return sequence_outputs["sequences"]
+            return (sequence_outputs["sequences"], forward_t, processing_t)
 
     def beam_sample(
         self,
@@ -2051,8 +2059,10 @@ class GenerationMixin:
         beam_scores = beam_scores.view((batch_size * num_beams,))
 
         this_peer_finished = False  # used by synced_gpus only
+        forward_t = []
+        processing_t = []
         while True:
-
+            t0 = time.time()
             if synced_gpus:
                 # Under synced_gpus the `forward` call must continue until all gpus complete their sequence.
                 # The following logic allows an early break if all peers finished generating their sequence
@@ -2071,6 +2081,9 @@ class GenerationMixin:
                 output_attentions=output_attentions,
                 output_hidden_states=output_hidden_states,
             )
+            torch.cuda.synchronize()
+            t_forward = time.time()
+            forward_t.append(t_forward - t0)
 
             if synced_gpus and this_peer_finished:
                 cur_len = cur_len + 1
@@ -2150,6 +2163,8 @@ class GenerationMixin:
                 else:
                     this_peer_finished = True
 
+            processing_t.append(time.time() - t_forward)
+
         sequence_outputs = beam_scorer.finalize(
             input_ids,
             beam_scores,
@@ -2183,7 +2198,7 @@ class GenerationMixin:
                     hidden_states=decoder_hidden_states,
                 )
         else:
-            return sequence_outputs["sequences"]
+            return (sequence_outputs["sequences"], forward_t, processing_t)
 
     def group_beam_search(
         self,
