@@ -127,7 +127,7 @@ def prepare_features_fast(_data: List, _max_seq_length: int, _doc_stride: int, _
         encoded_inputs = _tokenizer(
             text=example.question_text if question_first else example.context_text,
             text_pair=example.context_text if question_first else example.question_text,
-            padding="max_length",
+            padding="longest",
             truncation="only_second" if question_first else "only_first",
             max_length=max_seq_length,
             stride=doc_stride,
@@ -208,11 +208,15 @@ def post_process(_batch_features: List, _starts: Tensor, _ends: Tensor, _tokeniz
             # Normalize logits and spans to retrieve the answer
             start_ = np.exp(start_) / np.sum(np.exp(start_))
             end_ = np.exp(end_) / np.sum(np.exp(end_))
+            if _tokenizer.padding_side == 'right':
+                p_mask = feature.p_mask + [1] * (len(start_) - len(feature.p_mask))
+            else:
+                p_mask = [1] * (len(start_) - len(feature.p_mask)) + feature.p_mask
 
             # Mask padding and question
             start_, end_ = (
-                start_ * np.abs(np.array(feature.p_mask) - 1),
-                end_ * np.abs(np.array(feature.p_mask) - 1),
+                start_ * np.abs(np.array(p_mask) - 1),
+                end_ * np.abs(np.array(p_mask) - 1),
             )
 
             # TODO : What happens if not possible
@@ -290,7 +294,7 @@ def run_benchmark(_n_iter: int, _data: List, _tokenizer: PreTrainedTokenizer, _m
         for (_start, _end) in _batch_indices:
             _t_batch = time.time()
             _batch_features = _features[_start: _end]
-            _fw_args = inputs_for_model([f.__dict__ for f in _batch_features])
+            _fw_args = tokenizer.pad(inputs_for_model([f.__dict__ for f in _batch_features]))
 
             with torch.no_grad():
                 # Retrieve the score for the context tokens only (removing question tokens)
@@ -324,7 +328,7 @@ if __name__ == '__main__':
     max_answer_len = 15
     batch_size = 64
     n_iter = 10
-    fast_tokenizer = False
+    fast_tokenizer = True
     total_times = []
     feature_preparation_times = []
     forward_pass_times = []
@@ -355,7 +359,7 @@ if __name__ == '__main__':
     for (start, end) in batch_indices:
         t_batch = time.time()
         batch_features = features[start: end]
-        fw_args = inputs_for_model([f.__dict__ for f in batch_features])
+        fw_args = tokenizer.pad(inputs_for_model([f.__dict__ for f in batch_features]))
 
         with torch.no_grad():
             # Retrieve the score for the context tokens only (removing question tokens)
