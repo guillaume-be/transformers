@@ -43,8 +43,8 @@ def run_benchmark(_n_iter: int, _data: List, _tokenizer: PreTrainedTokenizer, _m
             forward_pass_times.append(time.time() - t_forward)
         total_times.append(time.time() - t1)
 
-    print(f'Forward pass: {sum(forward_pass_times) / len(forward_pass_times)}s')
-    print(f'Feature generation: {sum(feature_preparation_times) / len(feature_preparation_times)}s')
+    print(f'Forward pass: {sum(forward_pass_times) / len(total_times)}s')
+    print(f'Feature generation: {sum(feature_preparation_times) / len(total_times)}s')
     print(f'Total: {sum(total_times) / len(total_times)}s')
 
 
@@ -57,7 +57,7 @@ if __name__ == '__main__':
     root_path = Path('E:/Coding/data-resources/sst2/')
     batch_size = 64
     n_iter = 10
-    fast_tokenizer = False
+    fast_tokenizer = True
     total_times = []
     feature_preparation_times = []
     forward_pass_times = []
