@@ -320,7 +320,7 @@ def squad_convert_examples_to_features(
     doc_stride,
     max_query_length,
     is_training,
-    padding_strategy="max_length",
+    padding_strategy="longest",
     return_dataset=False,
     threads=1,
     tqdm_enabled=True,
