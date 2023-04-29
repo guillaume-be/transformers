@@ -11,7 +11,7 @@ class SummarizationModelOption(Enum):
     DISTILBART_6_6 = 'sshleifer/distilbart-cnn-6-6'
 
 
-model_type = SummarizationModelOption.BART_LARGE
+model_type = SummarizationModelOption.DISTILBART_6_6
 
 tokenizer = BartTokenizer.from_pretrained(model_type.value)
 model = BartForConditionalGeneration.from_pretrained(model_type.value).cuda()

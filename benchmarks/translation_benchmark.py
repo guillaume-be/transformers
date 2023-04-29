@@ -12,7 +12,7 @@ class TranslationModelOption(Enum):
     T5_FR = ('t5-base', "translate English to French: ")
 
 
-model_type = TranslationModelOption.MARIAN_EN_ES
+model_type = TranslationModelOption.T5_FR
 
 model = AutoModelWithLMHead.from_pretrained(model_type.value[0])
 tokenizer = AutoTokenizer.from_pretrained(model_type.value[0])
@@ -42,7 +42,7 @@ forward_pass_times = []
 for _ in range(n_iter):
     t1 = time.time()
     with torch.no_grad():
-        outputs = pipeline(TEXTS_TO_TRANSLATE, num_beams=6, early_stopping=True, max_length=512)
+        outputs = pipeline(TEXTS_TO_TRANSLATE, num_beams=6, early_stopping=True, max_length=512, batch_size=10)
         t2 = time.time()
         forward_pass_times.append(t2 - t1)
         print(outputs)

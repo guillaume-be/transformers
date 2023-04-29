@@ -36,11 +36,12 @@ for _ in range(num_iterations):
                                  num_return_sequences=5,
                                  num_beams=5,
                                  do_sample=False,
+                                 # do_sample=True,
                                  temperature=1.0,
                                  top_k=0,
                                  top_p=0.9,
                                  no_repeat_ngram_size=3,
-                                 early_stopping=True,
+                                 early_stopping=False,
                                  attention_mask=attention_mask
                                  )
 
